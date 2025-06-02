@@ -7,13 +7,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	rootCmd.AddCommand(scanCmd)
+}
+
 var rootCmd = &cobra.Command{
-	Use:   "scan",
-	Short: "A fast and flexible scanner",
-	Long:  `Scan is a fast and flexible scanner that can be used for various purposes.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Starting scan...")
-	},
+	Use:   "jedi-scan",
+	Short: "JediScan is a security tool that uses gitleaks to scan staged code for sensitive information ",
+	Long:  `JediScan is a security tool that uses gitleaks to scan staged code for sensitive information like API keys and tokens, ensuring your code stays secure before being committed.`,
 }
 
 func Execute() {
