@@ -1,6 +1,6 @@
 package main
 
-import "jedi-scan/cmd"
+import "github.com/richecr/jedi-scan/cmd"
 
 func main() {
 	cmd.Execute()
