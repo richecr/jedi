@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/richecr/jedi-scan/pkg/jediscan"
 	"github.com/spf13/cobra"
@@ -23,5 +24,12 @@ func init() {
 
 func Scan(cmd *cobra.Command, args []string) {
 	fmt.Println("Executing scan command...")
-	jediScan.Scan()
+	err := jediScan.Scan()
+	if err != nil {
+		fmt.Println("Error during scan:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Scan completed successfully.")
+	os.Exit(0)
 }

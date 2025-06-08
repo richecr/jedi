@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/richecr/jedi-scan/internal/model"
 	"github.com/richecr/jedi-scan/internal/tempfile"
 )
 
@@ -29,4 +30,14 @@ func UnmarshalResults(tempFile *tempfile.TempFile) ([]Leak, error) {
 	}
 
 	return leaks, nil
+}
+
+func FindLineNumberForLeak(changedLines []model.ChangedLine, leak Leak) int {
+	for _, cl := range changedLines {
+		if strings.Contains(cl.Content, leak.Match) {
+			return cl.Number
+		}
+	}
+
+	return -1
 }

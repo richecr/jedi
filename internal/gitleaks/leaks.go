@@ -3,10 +3,6 @@ package gitleaks
 type Leak struct {
 	RuleID      string   `json:"RuleID"`
 	Description string   `json:"Description"`
-	StartLine   int      `json:"StartLine"`
-	EndLine     int      `json:"EndLine"`
-	StartColumn int      `json:"StartColumn"`
-	EndColumn   int      `json:"EndColumn"`
 	Match       string   `json:"Match"`
 	Secret      string   `json:"Secret"`
 	File        string   `json:"File"`
