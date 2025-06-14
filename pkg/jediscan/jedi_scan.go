@@ -8,6 +8,7 @@ import (
 	"github.com/richecr/jedi-scan/internal/format"
 	"github.com/richecr/jedi-scan/internal/git"
 	"github.com/richecr/jedi-scan/internal/gitleaks"
+	"github.com/richecr/jedi-scan/internal/model"
 	"github.com/richecr/jedi-scan/internal/tempfile"
 )
 
@@ -101,6 +102,59 @@ func (j *JediScan) Scan() error {
 
 	fmt.Println(format.FormatSuccess("✅ No secrets found in staged files. You can proceed with the commit."))
 	return nil
+}
+
+func (j *JediScan) scanFile(file string) (bool, error) {
+	fmt.Println(format.FormatHeader("\n🔍 Verifying file: ") + format.FormatFileName(file))
+
+	diff, err := git.GetDiffWithChangedLines(file)
+	if err != nil {
+		fmt.Println(format.FormatError("❌ Error getting diff for file: ") + format.FormatFileName(file))
+		return false, errors.New("Failed to get diff for file: " + file)
+	}
+
+	tempFile, err := j.CreateTempFile()
+	if err != nil {
+		fmt.Printf("Error creating temporary file: %v", err)
+		return false, errors.New("Failed to create temporary file")
+	}
+	defer tempFile.Remove()
+
+	err = gitleaks.Scan(diff, tempFile)
+	if err != nil && err.Error() != "exit status 1" {
+		fmt.Println(format.FormatError("❌ Error running gitleaks: ") + format.FormatFileName(file))
+		return false, errors.New("Failed to run gitleaks on file: " + file)
+	}
+
+	leaks, err := gitleaks.UnmarshalResults(tempFile)
+	if err != nil {
+		fmt.Println(format.FormatError("❌ Error parsing gitleaks JSON output: ") + format.FormatFileName(file))
+		return false, errors.New("Failed to parse gitleaks JSON output for file: " + file)
+	}
+
+	changedLines := git.ExtractChangedLines(diff)
+	if len(leaks) > 0 {
+		fmt.Println(format.FormatError("🚨 Secrets found in file: ") + format.FormatFileName(file))
+		printLeaks(leaks, changedLines)
+		return true, nil
+	}
+
+	fmt.Println(format.FormatSuccess("✅ No secrets found in file: ") + format.FormatFileName(file))
+	return false, nil
+}
+
+func printLeaks(leaks []gitleaks.Leak, changedLines []model.ChangedLine) {
+	for _, leak := range leaks {
+		lineNum := gitleaks.FindLineNumberForLeak(changedLines, leak)
+		if lineNum == -1 {
+			continue
+		}
+		fmt.Println(format.FormatIndented("• Rule: " + format.FormatWarning(leak.RuleID)))
+		fmt.Println(format.FormatIndented("  Secret: " + leak.Secret))
+		fmt.Println(format.FormatIndented("  Line: " + format.FormatLineNumber(lineNum)))
+		fmt.Println(format.FormatIndented("  Match: " + leak.Match))
+		fmt.Println(format.FormatIndented("  Description: " + leak.Description))
+	}
 }
 
 func GetInstance(pattern string) *JediScan {
