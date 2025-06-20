@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"fmt"
+	"context"
 	"os"
 
+	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +19,9 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+	opts := fang.WithVersion("0.1.0")
+
+	if err := fang.Execute(context.TODO(), rootCmd, opts); err != nil {
 		os.Exit(1)
 	}
 }
