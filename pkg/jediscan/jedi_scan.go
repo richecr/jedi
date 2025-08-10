@@ -37,7 +37,7 @@ func (j *JediScan) Scan() error {
 	files, err := git.GetStagedFiles()
 	if err != nil {
 		fmt.Println(format.FormatError("❌ Error getting staged files: " + err.Error()))
-		return errors.New("Failed to get staged files")
+		return errors.New("failed to get staged files")
 	}
 
 	fmt.Println(format.FormatFileList(files))
@@ -47,57 +47,21 @@ func (j *JediScan) Scan() error {
 		if strings.TrimSpace(file) == "" {
 			continue
 		}
-		fmt.Println(format.FormatHeader("\n🔍 Verifying file: ") + format.FormatFileName(file))
 
-		diff, err := git.GetDiffWithChangedLines(file)
+		result, err := j.scanFile(file)
 		if err != nil {
-			fmt.Println(format.FormatError("❌ Error getting diff for file: ") + format.FormatFileName(file))
-			return errors.New("Failed to get diff for file: " + file)
+			fmt.Println(format.FormatError("❌ Error scanning file: ") + format.FormatFileName(file))
+			return err
 		}
 
-		tempFile, err := j.CreateTempFile()
-		if err != nil {
-			fmt.Printf("Error creating temporary file: %v", err)
-			return errors.New("Failed to create temporary file")
-		}
-		err = gitleaks.Scan(diff, tempFile)
-
-		if err != nil && err.Error() != "exit status 1" {
-			fmt.Println(format.FormatError("❌ Error running gitleaks: ") + format.FormatFileName(file))
-			return errors.New("Failed to run gitleaks on file: " + file)
-		}
-
-		leaks, err := gitleaks.UnmarshalResults(tempFile)
-		tempFile.Remove()
-		if err != nil {
-			fmt.Println(format.FormatError("❌ Error parsing gitleaks JSON output: ") + format.FormatFileName(file))
-			return errors.New("Failed to parse gitleaks JSON output for file: " + file)
-		}
-
-		changedLines := git.ExtractChangedLines(diff)
-
-		if len(leaks) > 0 {
+		if result {
 			exitCode = 1
-			fmt.Println(format.FormatError("🚨 Secrets found in file: ") + format.FormatFileName(file))
-			for _, leak := range leaks {
-				lineNum := gitleaks.FindLineNumberForLeak(changedLines, leak)
-				if lineNum == -1 {
-					continue
-				}
-				fmt.Println(format.FormatIndented("• Rule: " + format.FormatWarning(leak.RuleID)))
-				fmt.Println(format.FormatIndented("  Secret: " + leak.Secret))
-				fmt.Println(format.FormatIndented("  Line: " + format.FormatLineNumber(lineNum)))
-				fmt.Println(format.FormatIndented("  Match: " + leak.Match))
-				fmt.Println(format.FormatIndented("  Description: " + leak.Description))
-			}
-		} else {
-			fmt.Println(format.FormatSuccess("✅ No secrets found in file: ") + format.FormatFileName(file))
 		}
 	}
 
 	if exitCode == 1 {
 		fmt.Println(format.FormatError("🚨 Secrets found in staged files. Please review and fix them before committing."))
-		return errors.New("Secrets found in staged files")
+		return errors.New("secrets found in staged files")
 	}
 
 	fmt.Println(format.FormatSuccess("✅ No secrets found in staged files. You can proceed with the commit."))
@@ -116,7 +80,7 @@ func (j *JediScan) scanFile(file string) (bool, error) {
 	tempFile, err := j.CreateTempFile()
 	if err != nil {
 		fmt.Printf("Error creating temporary file: %v", err)
-		return false, errors.New("Failed to create temporary file")
+		return false, errors.New("failed to create temporary file")
 	}
 	defer tempFile.Remove()
 
