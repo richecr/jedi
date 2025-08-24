@@ -8,23 +8,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const tempFilePattern = "gitleaks-*.json"
+
 var scanCmd = &cobra.Command{
 	Use:   "scan",
-	Short: "A fast and flexible scanner",
-	Long:  `Scan is a fast and flexible scanner that can be used for various purposes.`,
+	Short: "Scan staged files for secrets using gitleaks",
+	Long:  `Scan staged git files for secrets and sensitive information before committing.`,
 	Run:   Scan,
-}
-
-var jediScan *jediscan.JediScan
-var tempFilePattern = "gitleaks-*.json"
-
-func init() {
-	jediScan = jediscan.GetInstance(tempFilePattern)
 }
 
 func Scan(cmd *cobra.Command, args []string) {
 	fmt.Println("Executing scan command...")
-	err := jediScan.Scan()
+
+	jediScan, err := jediscan.NewJediScan(tempFilePattern)
+	if err != nil {
+		fmt.Printf("Error initializing scanner: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = jediScan.Scan()
 	if err != nil {
 		fmt.Println("Error during scan:", err)
 		os.Exit(1)
