@@ -76,15 +76,15 @@ func (j *JediScan) Scan() error {
 func (j *JediScan) scanFile(file string) (bool, error) {
 	fmt.Println(format.FormatHeader("\n🔍 Verifying file: ") + format.FormatFileName(file))
 
-	filteredDiff, err := git.GetDiffWithChangedLines(file)
-	if err != nil {
-		fmt.Println(format.FormatError("❌ Error getting diff for file: ") + format.FormatFileName(file))
-		return false, fmt.Errorf("%s: %s", ErrGetDiff, file)
-	}
-
 	originalDiff, err := git.GetOriginalDiff(file)
 	if err != nil {
 		fmt.Println(format.FormatError("❌ Error getting original diff for file: ") + format.FormatFileName(file))
+		return false, fmt.Errorf("%s: %s", ErrGetDiff, file)
+	}
+
+	filteredDiff, err := git.GetDiffWithChangedLines(originalDiff, file)
+	if err != nil {
+		fmt.Println(format.FormatError("❌ Error getting diff for file: ") + format.FormatFileName(file))
 		return false, fmt.Errorf("%s: %s", ErrGetDiff, file)
 	}
 

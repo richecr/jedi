@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	diffutil "github.com/richecr/jedi-scan/internal/diff"
 	"github.com/richecr/jedi-scan/internal/model"
 )
 
@@ -30,12 +31,7 @@ func GetDiff(file string) (string, error) {
 	return string(output), nil
 }
 
-func GetDiffWithChangedLines(file string) (string, error) {
-	diff, err := getDiffRaw(file)
-	if err != nil {
-		return "", err
-	}
-
+func GetDiffWithChangedLines(diff, file string) (string, error) {
 	return filterDiffForNewLines(diff, file), nil
 }
 
@@ -115,7 +111,7 @@ func ExtractTrulyNewLines(diff string) []model.ChangedLine {
 	var changedLines []model.ChangedLine
 	var currentLine int
 
-	removedLines := extractRemovedLinesContent(lines)
+	removedLines := diffutil.ExtractRemovedLinesContent(lines)
 	hasReformattedLines := len(removedLines) > 0
 
 	for _, line := range lines {
@@ -125,9 +121,9 @@ func ExtractTrulyNewLines(diff string) []model.ChangedLine {
 			content := strings.TrimPrefix(line, "+")
 			originalContent := content
 
-			normalizedContent := normalizeContent(content)
+			normalizedContent := diffutil.NormalizeContent(content)
 
-			if !isReformattedLine(normalizedContent, removedLines) {
+			if !diffutil.IsReformattedLine(normalizedContent, removedLines) {
 				lineNumber := currentLine
 
 				if hasReformattedLines && currentLine > 1 {
@@ -142,26 +138,12 @@ func ExtractTrulyNewLines(diff string) []model.ChangedLine {
 			currentLine++
 		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
 			continue
-		} else if isContextLine(line) {
+		} else if diffutil.IsContextLine(line) {
 			currentLine++
 		}
 	}
 
 	return changedLines
-}
-
-func extractRemovedLinesContent(lines []string) []string {
-	var removedLines []string
-	for _, line := range lines {
-		if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-			content := strings.TrimPrefix(line, "-")
-			normalized := normalizeContent(content)
-			if normalized != "" {
-				removedLines = append(removedLines, normalized)
-			}
-		}
-	}
-	return removedLines
 }
 
 func parseHunkStartLine(line string) int {
@@ -179,27 +161,6 @@ func parseHunkStartLine(line string) int {
 func normalizeContent(content string) string {
 	content = strings.ReplaceAll(content, "\\ No newline at end of file", "")
 	return strings.TrimSpace(content)
-}
-
-func isReformattedLine(content string, removedLines []string) bool {
-	if content == "" {
-		return false
-	}
-	for _, removedContent := range removedLines {
-		if content == removedContent {
-			return true
-		}
-	}
-	return false
-}
-
-func isContextLine(line string) bool {
-	return !strings.HasPrefix(line, "@@") &&
-		!strings.HasPrefix(line, "+++") &&
-		!strings.HasPrefix(line, "---") &&
-		!strings.HasPrefix(line, "diff") &&
-		!strings.HasPrefix(line, "index") &&
-		line != ""
 }
 
 func ExtractChangedLines(diff string) []model.ChangedLine {
@@ -228,7 +189,7 @@ func ExtractChangedLines(diff string) []model.ChangedLine {
 			currentLine++
 		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
 			continue
-		} else if !strings.HasPrefix(line, "@@") && !strings.HasPrefix(line, "+++") && !strings.HasPrefix(line, "---") && !strings.HasPrefix(line, "diff") && !strings.HasPrefix(line, "index") && line != "" {
+		} else if diffutil.IsContextLine(line) {
 			currentLine++
 		}
 	}
