@@ -1,4 +1,4 @@
-BINARY_NAME := jedi-scan
+BINARY_NAME := jedi
 
 .PHONY: all build run test lint fmt vet clean help
 
@@ -6,7 +6,7 @@ all: build
 
 build:
 	@echo ">> Building..."
-	go build
+	go build -o $(BINARY_NAME) main.go
 
 run: build
 	@echo ">> Running..."
